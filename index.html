@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ほんとうの「円」をさがせ！</title>
+  <title>円の中心をさがそう！</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
     body {
       font-family: "Hiragino Sans", "Meiryo", sans-serif;
-      background-color: #f0f4f8;
+      background-color: #f7f9fa;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -24,6 +24,7 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
       padding: 20px;
       text-align: center;
+      position: relative;
     }
     .header-info {
       display: flex;
@@ -56,10 +57,10 @@
       width: 100%;
       height: 100%;
       display: block;
-      cursor: pointer;
+      cursor: crosshair;
     }
     .btn {
-      background-color: #4caf50;
+      background-color: #ff9800;
       color: white;
       border: none;
       padding: 12px 28px;
@@ -79,7 +80,7 @@
     }
     .title-screen h2 {
       font-size: 1.6rem;
-      color: #1976d2;
+      color: #e65100;
       margin-bottom: 15px;
     }
     .title-screen p {
@@ -128,18 +129,18 @@
 <div class="container">
   <!-- タイトル画面 -->
   <div id="titleScreen" class="title-screen">
-    <h2>🔍 ほんとうの「円」をさがせ！</h2>
-    <p>たくさんの図形の中から、<br>1つだけある「まんまる（正円）」をみつけよう！<br>全20問のチャレンジだよ！</p>
+    <h2>🟡 円の中心をさがそう！</h2>
+    <p>円のまん中（中心）だと思うところを<br>タップして見つけよう！<br>全20問のチャレンジだよ！</p>
     <button class="btn start-btn" onclick="startGame()">ゲームスタート！</button>
   </div>
 
   <!-- ゲームプレイ画面（初期は非表示） -->
   <div id="gameScreen" style="display:none;">
     <div class="header-info">
-      <h1>🔍 ほんとうの「円」をさがせ！</h1>
+      <h1>🟡 円の中心をさがそう！</h1>
       <div class="q-count" id="qCount">だい 1 / 20 問</div>
     </div>
-    <div class="msg" id="msg">1つだけある「まんまる（正円）」をえらんでね！</div>
+    <div class="msg" id="msg">まん中（中心）だと思うところをタップしてね！</div>
     
     <div class="canvas-wrapper" id="wrapper">
       <canvas id="gameCanvas"></canvas>
@@ -165,7 +166,7 @@
   const msg = document.getElementById('msg');
   const nextBtn = document.getElementById('nextBtn');
   const qCountEl = document.getElementById('qCount');
-  
+
   const titleScreen = document.getElementById('titleScreen');
   const gameScreen = document.getElementById('gameScreen');
   const clearScreen = document.getElementById('clearScreen');
@@ -174,13 +175,9 @@
   const TOTAL_QUESTIONS = 20;
   let questionNumber = 0;
   let score = 0;
-  let shapes = [];
+  let currentQuestion = { x: 0, y: 0, r: 0, type: 'full', startAngle: 0, endAngle: 0 };
   let isAnswered = false;
   let hasMistakenInCurrentQ = false;
-
-  const lineColors = [
-    '#f57c00', '#1976d2', '#c2185b', '#7b1fa2', '#388e3c', '#0097a7', '#e65100'
-  ];
 
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -249,112 +246,68 @@
     hasMistakenInCurrentQ = false;
     nextBtn.style.display = 'none';
     qCountEl.textContent = `だい ${questionNumber} / ${TOTAL_QUESTIONS} 問`;
-    msg.textContent = '1つだけあるq「まんまる（正円）」をえらんでね！'.replace('q', '');
+    msg.textContent = 'まん中（中心）だと思うところをタップしてね！';
 
     initCanvasSize();
-    generateShapes();
-    drawShapes();
-  }
 
-  function generateShapes() {
-    shapes = [];
-    let count, distortionMin;
+    const padding = 80;
+    const minR = 60;
+    const maxR = Math.min(canvas.width, canvas.height) / 2.5;
 
-    if (questionNumber <= 10) {
-      count = 5 + Math.floor(Math.random() * 3);
-      distortionMin = 0.25;
-    } else if (questionNumber <= 15) {
-      count = 9 + Math.floor(Math.random() * 3);
-      distortionMin = 0.15;
-    } else {
-      count = 14;
-      distortionMin = 0.08;
+    const r = Math.floor(Math.random() * (maxR - minR)) + minR;
+    const x = Math.floor(Math.random() * (canvas.width - r * 2 - padding * 2)) + r + padding;
+    const y = Math.floor(Math.random() * (canvas.height - r * 2 - padding * 2)) + r + padding;
+
+    let type = 'full';
+
+    // 10問目までは正円、11問目以降から半円弧や1/4円弧が混ざる
+    if (questionNumber > 10) {
+      const types = ['full', 'half', 'quarter'];
+      type = types[Math.floor(Math.random() * types.length)];
     }
 
-    const correctIndex = Math.floor(Math.random() * count);
+    let startAngle = 0;
+    let endAngle = Math.PI * 2;
 
-    for (let i = 0; i < count; i++) {
-      const isCorrect = (i === correctIndex);
-      let baseR, x, y;
-
-      if (isCorrect) {
-        const allowCut = (questionNumber > 10) && (Math.random() < 0.25);
-
-        if (allowCut) {
-          baseR = 45 + Math.random() * 20;
-          const side = Math.floor(Math.random() * 4);
-          if (side === 0) { x = baseR * 0.3; y = canvas.height * 0.3 + Math.random() * (canvas.height * 0.4); }
-          else if (side === 1) { x = canvas.width - baseR * 0.3; y = canvas.height * 0.3 + Math.random() * (canvas.height * 0.4); }
-          else if (side === 2) { x = canvas.width * 0.3 + Math.random() * (canvas.width * 0.4); y = baseR * 0.3; }
-          else { x = canvas.width * 0.3 + Math.random() * (canvas.width * 0.4); y = canvas.height - baseR * 0.3; }
-        } else {
-          baseR = 25 + Math.random() * 25;
-          const padding = baseR + 15;
-          x = padding + Math.random() * (canvas.width - padding * 2);
-          y = padding + Math.random() * (canvas.height - padding * 2);
-        }
-      } else {
-        baseR = 20 + Math.random() * 30;
-        const padding = 15;
-        x = padding + Math.random() * (canvas.width - padding * 2);
-        y = padding + Math.random() * (canvas.height - padding * 2);
-      }
-
-      let rx = baseR, ry = baseR;
-
-      if (!isCorrect) {
-        const factor = 1 + (Math.random() > 0.5 ? 1 : -1) * (distortionMin + Math.random() * 0.3);
-        rx = baseR * factor;
-        ry = baseR / factor;
-      }
-
-      const strokeColor = lineColors[Math.floor(Math.random() * lineColors.length)];
-
-      shapes.push({
-        x, y, r: baseR, rx, ry,
-        isCorrect,
-        strokeColor,
-        rotation: isCorrect ? 0 : Math.random() * Math.PI
-      });
+    if (type === 'half') {
+      const turns = [0, Math.PI / 2, Math.PI, Math.PI * 1.5];
+      const t = turns[Math.floor(Math.random() * turns.length)];
+      startAngle = t;
+      endAngle = t + Math.PI;
+    } else if (type === 'quarter') {
+      const turns = [0, Math.PI / 2, Math.PI, Math.PI * 1.5];
+      const t = turns[Math.floor(Math.random() * turns.length)];
+      startAngle = t;
+      endAngle = t + Math.PI / 2;
     }
 
-    const correctObj = shapes.splice(correctIndex, 1)[0];
-    shapes.push(correctObj);
+    currentQuestion = { x, y, r, type, startAngle, endAngle };
+    drawQuestion();
   }
 
-  function drawShapes(highlightIndex = -1) {
+  function drawQuestion() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!currentQuestion.r) return;
 
-    shapes.forEach((s, idx) => {
-      ctx.save();
-      ctx.translate(s.x, s.y);
-      ctx.rotate(s.rotation);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = '#ffa726';
 
+    if (currentQuestion.type === 'full') {
       ctx.beginPath();
-      ctx.ellipse(0, 0, s.rx, s.ry, 0, 0, Math.PI * 2);
-
-      if (isAnswered && s.isCorrect) {
-        ctx.fillStyle = 'rgba(76, 175, 80, 0.35)';
-        ctx.strokeStyle = '#2e7d32';
-        ctx.lineWidth = 6;
-        ctx.fill();
-      } else if (highlightIndex === idx) {
-        ctx.fillStyle = 'rgba(244, 67, 54, 0.3)';
-        ctx.strokeStyle = '#c62828';
-        ctx.lineWidth = 5;
-        ctx.fill();
-      } else {
-        ctx.strokeStyle = s.strokeColor;
-        ctx.lineWidth = 3.5;
-      }
-
+      ctx.arc(currentQuestion.x, currentQuestion.y, currentQuestion.r, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff3e0';
+      ctx.fill();
       ctx.stroke();
-      ctx.restore();
-    });
+    } else {
+      ctx.beginPath();
+      ctx.arc(currentQuestion.x, currentQuestion.y, currentQuestion.r, currentQuestion.startAngle, currentQuestion.endAngle, false);
+      ctx.stroke();
+    }
   }
 
   function handleTap(e) {
     if (isAnswered) return;
+    isAnswered = true;
 
     const rect = canvas.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -363,67 +316,49 @@
     const tapX = clientX - rect.left;
     const tapY = clientY - rect.top;
 
-    let tappedCorrect = false;
-    let tappedWrongIndex = -1;
+    const dist = Math.hypot(tapX - currentQuestion.x, tapY - currentQuestion.y);
+    const threshold = currentQuestion.r * 0.25;
 
-    const correctShape = shapes.find(s => s.isCorrect);
-    if (correctShape) {
-      const dx = tapX - correctShape.x;
-      const dy = tapY - correctShape.y;
-      const cos = Math.cos(-correctShape.rotation);
-      const sin = Math.sin(-correctShape.rotation);
-      const rx = dx * cos - dy * sin;
-      const ry = dx * sin + dy * cos;
+    drawQuestion();
 
-      if ((rx * rx) / (correctShape.rx * correctShape.rx) + (ry * ry) / (correctShape.ry * correctShape.ry) <= 1) {
-        tappedCorrect = true;
-      }
-    }
+    // タップ位置（赤丸）
+    ctx.beginPath();
+    ctx.arc(tapX, tapY, 6, 0, Math.PI * 2);
+    ctx.fillStyle = '#e91e63';
+    ctx.fill();
 
-    if (!tappedCorrect) {
-      for (let i = shapes.length - 1; i >= 0; i--) {
-        const s = shapes[i];
-        if (s.isCorrect) continue;
+    // 正解の中心（緑丸）
+    ctx.beginPath();
+    ctx.arc(currentQuestion.x, currentQuestion.y, 6, 0, Math.PI * 2);
+    ctx.fillStyle = '#4caf50';
+    ctx.fill();
 
-        const dx = tapX - s.x;
-        const dy = tapY - s.y;
-        const cos = Math.cos(-s.rotation);
-        const sin = Math.sin(-s.rotation);
-        const rx = dx * cos - dy * sin;
-        const ry = dx * sin + dy * cos;
+    // 結ぶ点線
+    ctx.beginPath();
+    ctx.setLineDash([4, 4]);
+    ctx.moveTo(tapX, tapY);
+    ctx.lineTo(currentQuestion.x, currentQuestion.y);
+    ctx.strokeStyle = '#e91e63';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.setLineDash([]);
 
-        if ((rx * rx) / (s.rx * s.rx) + (ry * ry) / (s.ry * s.ry) <= 1) {
-          tappedWrongIndex = i;
-          break;
-        }
-      }
-    }
-
-    isAnswered = true;
-
-    if (tappedCorrect) {
+    if (dist <= threshold) {
       if (!hasMistakenInCurrentQ) {
         score++;
       }
-      msg.textContent = questionNumber === TOTAL_QUESTIONS ? '🎉 ラスト正解！お疲れ様でした！' : '🎉 大あたり！ほんとうの「正円」を発見！';
+      msg.textContent = questionNumber === TOTAL_QUESTIONS ? '🎉 ラスト正解！お疲れ様でした！' : '🎉 大あたり！すごい！';
       playSound('correct');
-      drawShapes();
-      
+
       if (questionNumber === TOTAL_QUESTIONS) {
         nextBtn.textContent = '結果を見る！';
       } else {
         nextBtn.textContent = 'つぎの問題へ！';
       }
-    } else if (tappedWrongIndex !== -1) {
-      hasMistakenInCurrentQ = true;
-      msg.textContent = 'おしい！それは ちょっとだけ ゆがんでいるよ！';
-      playSound('wrong');
-      drawShapes(tappedWrongIndex);
-      isAnswered = false;
-      return;
     } else {
-      isAnswered = false;
-      return;
+      hasMistakenInCurrentQ = true;
+      msg.textContent = 'おしい！本当の中心はここだよ！';
+      playSound('wrong');
     }
 
     nextBtn.style.display = 'inline-block';
@@ -437,7 +372,9 @@
 
   window.addEventListener('resize', () => {
     initCanvasSize();
-    if (shapes.length > 0 && gameScreen.style.display !== 'none') drawShapes();
+    if (currentQuestion.r > 0 && gameScreen.style.display !== 'none') {
+      drawQuestion();
+    }
   });
 </script>
 
