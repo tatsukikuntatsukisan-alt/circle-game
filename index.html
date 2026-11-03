@@ -63,7 +63,7 @@
 
 <div class="container">
   <h1>🟡 円の中心をさがそう！</h1>
-  <div class="msg" id="msg">まん中だと思うところをタップしてね！</div>
+  <div class="msg" id="msg">まん中（中心）だと思うところをタップしてね！</div>
   
   <div class="canvas-wrapper" id="wrapper">
     <canvas id="gameCanvas"></canvas>
@@ -95,15 +95,15 @@
     nextBtn.style.display = 'none';
     msg.textContent = 'まん中（中心）だと思うところをタップしてね！';
 
-    const padding = 70;
-    const minR = 50;
+    const padding = 80;
+    const minR = 60;
     const maxR = Math.min(canvas.width, canvas.height) / 2.5;
 
     const r = Math.floor(Math.random() * (maxR - minR)) + minR;
     const x = Math.floor(Math.random() * (canvas.width - r * 2 - padding * 2)) + r + padding;
     const y = Math.floor(Math.random() * (canvas.height - r * 2 - padding * 2)) + r + padding;
 
-    // 0: まるごと円, 1: 半円, 2: 1/4の円
+    // 確実に「フル」「半円」「1/4円」が抽選されるように設定
     const types = ['full', 'half', 'quarter'];
     const type = types[Math.floor(Math.random() * types.length)];
 
@@ -111,13 +111,11 @@
     let endAngle = Math.PI * 2;
 
     if (type === 'half') {
-      // 4方向のいずれかの半円
       const turns = [0, Math.PI / 2, Math.PI, Math.PI * 1.5];
       const t = turns[Math.floor(Math.random() * turns.length)];
       startAngle = t;
       endAngle = t + Math.PI;
     } else if (type === 'quarter') {
-      // 4隅のいずれかの1/4円
       const turns = [0, Math.PI / 2, Math.PI, Math.PI * 1.5];
       const t = turns[Math.floor(Math.random() * turns.length)];
       startAngle = t;
@@ -136,7 +134,7 @@
     if (currentQuestion.type === 'full') {
       ctx.arc(currentQuestion.x, currentQuestion.y, currentQuestion.r, 0, Math.PI * 2);
     } else {
-      // 半円や1/4円の場合、中心から線を描いて図形として閉じる
+      // 半円や1/4円は中心（頂点）から描き始める
       ctx.moveTo(currentQuestion.x, currentQuestion.y);
       ctx.arc(currentQuestion.x, currentQuestion.y, currentQuestion.r, currentQuestion.startAngle, currentQuestion.endAngle);
       ctx.closePath();
@@ -161,7 +159,7 @@
     const tapY = clientY - rect.top;
 
     const dist = Math.hypot(tapX - currentQuestion.x, tapY - currentQuestion.y);
-    const threshold = currentQuestion.r * 0.15;
+    const threshold = currentQuestion.r * 0.2; // 少し判定を優しく調整
 
     drawQuestion();
 
@@ -171,7 +169,7 @@
     ctx.fillStyle = '#e91e63';
     ctx.fill();
 
-    // 正解の中心（緑丸）※半円や1/4円でも、本当の中心は常にここ！
+    // 正解の中心（緑丸）
     ctx.beginPath();
     ctx.arc(currentQuestion.x, currentQuestion.y, 6, 0, Math.PI * 2);
     ctx.fillStyle = '#4caf50';
