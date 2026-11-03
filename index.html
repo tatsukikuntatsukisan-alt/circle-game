@@ -139,17 +139,14 @@
     }
   }
 
-  // キャンバスのサイズを確実に設定し、図形を再描画する
-  function updateCanvasSize() {
+  // キャンバスの大きさを強制的にセット
+  function initCanvasSize() {
+    canvas.width = 500;
+    canvas.height = 375;
     const rect = wrapper.getBoundingClientRect();
-    canvas.width = rect.width > 0 ? rect.width : 500;
-    canvas.height = rect.height > 0 ? rect.height : 375;
-  }
-
-  function resizeCanvas() {
-    updateCanvasSize();
-    if (currentQuestion.r > 0) {
-      drawQuestion();
+    if (rect.width > 0) {
+      canvas.width = rect.width;
+      canvas.height = rect.height;
     }
   }
 
@@ -158,13 +155,12 @@
     nextBtn.style.display = 'none';
     questionNumber++;
     qCountEl.textContent = `だい ${questionNumber} 問`;
-
     msg.textContent = 'まん中（中心）だと思うところをタップしてね！';
 
-    updateCanvasSize();
+    initCanvasSize();
 
-    const padding = 80;
-    const minR = 60;
+    const padding = 60;
+    const minR = 50;
     const maxR = Math.min(canvas.width, canvas.height) / 2.5;
 
     const r = Math.floor(Math.random() * (maxR - minR)) + minR;
@@ -173,8 +169,7 @@
 
     let type = 'full';
 
-    // 10問目までは絶対に「正円（full）」
-    // 11問目以降から「正円」「半円弧」「1/4円弧」がランダム出現
+    // 10問目までは正円、11問目以降から半円弧・1/4円弧が混ざる
     if (questionNumber > 10) {
       const types = ['full', 'half', 'quarter'];
       type = types[Math.floor(Math.random() * types.length)];
@@ -231,7 +226,7 @@
     const tapY = clientY - rect.top;
 
     const dist = Math.hypot(tapX - currentQuestion.x, tapY - currentQuestion.y);
-    const threshold = currentQuestion.r * 0.2;
+    const threshold = currentQuestion.r * 0.25;
 
     drawQuestion();
 
@@ -274,13 +269,13 @@
     handleTap(e);
   }, { passive: false });
 
-  window.addEventListener('resize', resizeCanvas);
-  
-  // 読み込み完了後に確実に実行
-  window.addEventListener('load', () => {
-    updateCanvasSize();
-    nextQuestion();
+  window.addEventListener('resize', () => {
+    initCanvasSize();
+    drawQuestion();
   });
+
+  // 読み込みを待たずに即座に1問目を生成・表示
+  nextQuestion();
 </script>
 
 </body>
