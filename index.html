@@ -109,15 +109,15 @@
     .clear-screen p {
       font-size: 1.2rem;
       color: #333;
-      margin-bottom: 25px;
+      margin-bottom: 20px;
       line-height: 1.6;
     }
     .score-badge {
-      font-size: 2rem;
+      font-size: 2.2rem;
       color: #e91e63;
       font-weight: bold;
       background: #fce4ec;
-      padding: 10px 20px;
+      padding: 12px 24px;
       border-radius: 16px;
       display: inline-block;
       margin: 10px 0 20px 0;
@@ -130,7 +130,7 @@
   <!-- タイトル画面 -->
   <div id="titleScreen" class="title-screen">
     <h2>🟡 円の中心をさがそう！</h2>
-    <p>円のまん中（中心）だと思うところを<br>タップして見つけよう！<br>全20問のチャレンジだよ！</p>
+    <p>中心に近いほど高い点数（最大100点）がもらえるよ！<br>全20問で高得点を目指そう！</p>
     <button class="btn start-btn" onclick="startGame()">ゲームスタート！</button>
   </div>
 
@@ -152,9 +152,9 @@
   <!-- 全20問クリア画面 -->
   <div id="clearScreen" class="clear-screen">
     <h2>🏆 ぜんぶクリア！おめでとう！</h2>
-    <p>すべての問題が終わりました！<br>あなたの正解数は……</p>
-    <div class="score-badge" id="scoreText">20問中 0問正解</div>
-    <p>すごい集中力だったね！もう一度チャレンジしてみよう！</p>
+    <p>全20問のチャレンジが終わりました！<br>あなたの合計スコアは……</p>
+    <div class="score-badge" id="scoreText">0 点 / 2000点</div>
+    <p>もっと中心を狙って、高得点を目指そう！</p>
     <button class="btn" onclick="returnToTitle()">タイトルへもどる</button>
   </div>
 </div>
@@ -174,10 +174,9 @@
 
   const TOTAL_QUESTIONS = 20;
   let questionNumber = 0;
-  let score = 0;
+  let totalScore = 0;
   let currentQuestion = { x: 0, y: 0, r: 0, type: 'full', startAngle: 0, endAngle: 0 };
   let isAnswered = false;
-  let hasMistakenInCurrentQ = false;
 
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -223,7 +222,7 @@
     clearScreen.style.display = 'none';
     gameScreen.style.display = 'block';
     questionNumber = 0;
-    score = 0;
+    totalScore = 0;
     nextQuestion();
   }
 
@@ -238,12 +237,11 @@
     if (questionNumber > TOTAL_QUESTIONS) {
       gameScreen.style.display = 'none';
       clearScreen.style.display = 'block';
-      scoreText.textContent = `全 ${TOTAL_QUESTIONS} 問中 ${score} 問正解！`;
+      scoreText.textContent = `${totalScore} 点 / 2000点`;
       return;
     }
 
     isAnswered = false;
-    hasMistakenInCurrentQ = false;
     nextBtn.style.display = 'none';
     qCountEl.textContent = `だい ${questionNumber} / ${TOTAL_QUESTIONS} 問`;
     msg.textContent = 'まん中（中心）だと思うところをタップしてね！';
@@ -260,7 +258,6 @@
 
     let type = 'full';
 
-    // 10問目までは正円、11問目以降から半円弧や1/4円弧が混ざる
     if (questionNumber > 10) {
       const types = ['full', 'half', 'quarter'];
       type = types[Math.floor(Math.random() * types.length)];
@@ -317,7 +314,7 @@
     const tapY = clientY - rect.top;
 
     const dist = Math.hypot(tapX - currentQuestion.x, tapY - currentQuestion.y);
-    const threshold = currentQuestion.r * 0.25;
+    const maxAllowableDist = currentQuestion.r * 0.25; // 判定閾値
 
     drawQuestion();
 
@@ -343,22 +340,31 @@
     ctx.stroke();
     ctx.setLineDash([]);
 
-    if (dist <= threshold) {
-      if (!hasMistakenInCurrentQ) {
-        score++;
-      }
-      msg.textContent = questionNumber === TOTAL_QUESTIONS ? '🎉 ラスト正解！お疲れ様でした！' : '🎉 大あたり！すごい！';
-      playSound('correct');
+    let earnedPoints = 0;
 
-      if (questionNumber === TOTAL_QUESTIONS) {
-        nextBtn.textContent = '結果を見る！';
+    if (dist <= maxAllowableDist) {
+      // 距離に応じて点数を算出（近いほど100点に近づく）
+      // 誤差0で100点、限界ギリギリで60点
+      const ratio = dist / maxAllowableDist; // 0.0 〜 1.0
+      earnedPoints = Math.round(100 - ratio * 40);
+      totalScore += earnedPoints;
+
+      if (earnedPoints >= 95) {
+        msg.textContent = `🌟 ピタリ賞！ 100点！すごい！`;
       } else {
-        nextBtn.textContent = 'つぎの問題へ！';
+        msg.textContent = `🎉 大あたり！ ${earnedPoints}点ゲット！`;
       }
+      playSound('correct');
     } else {
-      hasMistakenInCurrentQ = true;
-      msg.textContent = 'おしい！本当の中心はここだよ！';
+      earnedPoints = 0;
+      msg.textContent = 'おしい！ちょっと中心から離れちゃった（0点）';
       playSound('wrong');
+    }
+
+    if (questionNumber === TOTAL_QUESTIONS) {
+      nextBtn.textContent = '結果を見る！';
+    } else {
+      nextBtn.textContent = 'つぎの問題へ！';
     }
 
     nextBtn.style.display = 'inline-block';
