@@ -82,7 +82,7 @@
   let currentQuestion = { x: 0, y: 0, r: 0, type: 'full', startAngle: 0, endAngle: 0 };
   let isAnswered = false;
 
-  // 効果音機能
+  // Web Audio APIによる効果音
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
   function playSound(type) {
@@ -97,7 +97,6 @@
     const now = audioCtx.currentTime;
 
     if (type === 'correct') {
-      // ピンポン♪
       osc.type = 'sine';
       osc.frequency.setValueAtTime(587.33, now);
       osc.frequency.setValueAtTime(880.00, now + 0.12);
@@ -108,7 +107,6 @@
       osc.start(now);
       osc.stop(now + 0.4);
     } else {
-      // ブー
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(150, now);
       osc.frequency.setValueAtTime(120, now + 0.15);
@@ -124,128 +122,4 @@
   function resizeCanvas() {
     const rect = wrapper.getBoundingClientRect();
     if (rect.width === 0) return;
-    canvas.width = rect.width;
-    canvas.height = rect.height;
-    drawQuestion();
-  }
-
-  function nextQuestion() {
-    isAnswered = false;
-    nextBtn.style.display = 'none';
-    msg.textContent = 'まん中（中心）だと思うところをタップしてね！';
-
-    const padding = 80;
-    const minR = 60;
-    const maxR = Math.min(canvas.width, canvas.height) / 2.5;
-
-    const r = Math.floor(Math.random() * (maxR - minR)) + minR;
-    const x = Math.floor(Math.random() * (canvas.width - r * 2 - padding * 2)) + r + padding;
-    const y = Math.floor(Math.random() * (canvas.height - r * 2 - padding * 2)) + r + padding;
-
-    const types = ['full', 'half', 'quarter'];
-    const type = types[Math.floor(Math.random() * types.length)];
-
-    let startAngle = 0;
-    let endAngle = Math.PI * 2;
-
-    if (type === 'half') {
-      const turns = [0, Math.PI / 2, Math.PI, Math.PI * 1.5];
-      const t = turns[Math.floor(Math.random() * turns.length)];
-      startAngle = t;
-      endAngle = t + Math.PI;
-    } else if (type === 'quarter') {
-      const turns = [0, Math.PI / 2, Math.PI, Math.PI * 1.5];
-      const t = turns[Math.floor(Math.random() * turns.length)];
-      startAngle = t;
-      endAngle = t + Math.PI / 2;
-    }
-
-    currentQuestion = { x, y, r, type, startAngle, endAngle };
-    drawQuestion();
-  }
-
-  function drawQuestion() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (!currentQuestion.r) return;
-
-    ctx.beginPath();
-    if (currentQuestion.type === 'full') {
-      // フル円はこれまで通り中を塗りつぶして表示
-      ctx.arc(currentQuestion.x, currentQuestion.y, currentQuestion.r, 0, Math.PI * 2);
-      ctx.fillStyle = '#fff3e0';
-      ctx.fill();
-    } else {
-      // 半円や1/4円は「円弧の線だけ」を表示する（直線や塗りつぶしなし）
-      ctx.arc(currentQuestion.x, currentQuestion.y, currentQuestion.r, currentQuestion.startAngle, currentQuestion.endAngle);
-    }
-
-    ctx.lineWidth = 5;
-    ctx.strokeStyle = '#ffa726';
-    ctx.stroke();
-  }
-
-  function handleTap(e) {
-    if (isAnswered) return;
-    isAnswered = true;
-
-    const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-    const tapX = clientX - rect.left;
-    const tapY = clientY - rect.top;
-
-    const dist = Math.hypot(tapX - currentQuestion.x, tapY - currentQuestion.y);
-    const threshold = currentQuestion.r * 0.2;
-
-    drawQuestion();
-
-    // タップ位置（赤丸）
-    ctx.beginPath();
-    ctx.arc(tapX, tapY, 6, 0, Math.PI * 2);
-    ctx.fillStyle = '#e91e63';
-    ctx.fill();
-
-    // 正解の中心（緑丸）
-    ctx.beginPath();
-    ctx.arc(currentQuestion.x, currentQuestion.y, 6, 0, Math.PI * 2);
-    ctx.fillStyle = '#4caf50';
-    ctx.fill();
-
-    // 結ぶ点線
-    ctx.beginPath();
-    ctx.setLineDash([4, 4]);
-    ctx.moveTo(tapX, tapY);
-    ctx.lineTo(currentQuestion.x, currentQuestion.y);
-    ctx.strokeStyle = '#e91e63';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    if (dist <= threshold) {
-      msg.textContent = '🎉 大あたり！すごい！';
-      playSound('correct');
-    } else {
-      msg.textContent = 'おしい！本当の中心はここだよ！';
-      playSound('wrong');
-    }
-
-    nextBtn.style.display = 'inline-block';
-  }
-
-  canvas.addEventListener('mousedown', handleTap);
-  canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    handleTap(e);
-  }, { passive: false });
-
-  window.addEventListener('resize', resizeCanvas);
-  
-  window.onload = () => {
-    resizeCanvas();
-    nextQuestion();
-  };
-</script>
-
-</body>
-</html>
+    canvas
