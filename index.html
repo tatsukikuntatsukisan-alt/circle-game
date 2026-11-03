@@ -79,7 +79,7 @@
   const msg = document.getElementById('msg');
   const nextBtn = document.getElementById('nextBtn');
 
-  let currentCircle = { x: 0, y: 0, r: 0 };
+  let currentQuestion = { x: 0, y: 0, r: 0, type: 'full', startAngle: 0, endAngle: 0 };
   let isAnswered = false;
 
   function resizeCanvas() {
@@ -93,26 +93,55 @@
   function nextQuestion() {
     isAnswered = false;
     nextBtn.style.display = 'none';
-    msg.textContent = 'まん中だと思うところをタップしてね！';
+    msg.textContent = 'まん中（中心）だと思うところをタップしてね！';
 
-    const padding = 50;
-    const minR = 40;
-    const maxR = Math.min(canvas.width, canvas.height) / 3;
+    const padding = 70;
+    const minR = 50;
+    const maxR = Math.min(canvas.width, canvas.height) / 2.5;
 
     const r = Math.floor(Math.random() * (maxR - minR)) + minR;
     const x = Math.floor(Math.random() * (canvas.width - r * 2 - padding * 2)) + r + padding;
     const y = Math.floor(Math.random() * (canvas.height - r * 2 - padding * 2)) + r + padding;
 
-    currentCircle = { x, y, r };
+    // 0: まるごと円, 1: 半円, 2: 1/4の円
+    const types = ['full', 'half', 'quarter'];
+    const type = types[Math.floor(Math.random() * types.length)];
+
+    let startAngle = 0;
+    let endAngle = Math.PI * 2;
+
+    if (type === 'half') {
+      // 4方向のいずれかの半円
+      const turns = [0, Math.PI / 2, Math.PI, Math.PI * 1.5];
+      const t = turns[Math.floor(Math.random() * turns.length)];
+      startAngle = t;
+      endAngle = t + Math.PI;
+    } else if (type === 'quarter') {
+      // 4隅のいずれかの1/4円
+      const turns = [0, Math.PI / 2, Math.PI, Math.PI * 1.5];
+      const t = turns[Math.floor(Math.random() * turns.length)];
+      startAngle = t;
+      endAngle = t + Math.PI / 2;
+    }
+
+    currentQuestion = { x, y, r, type, startAngle, endAngle };
     drawQuestion();
   }
 
   function drawQuestion() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (!currentCircle.r) return;
+    if (!currentQuestion.r) return;
 
     ctx.beginPath();
-    ctx.arc(currentCircle.x, currentCircle.y, currentCircle.r, 0, Math.PI * 2);
+    if (currentQuestion.type === 'full') {
+      ctx.arc(currentQuestion.x, currentQuestion.y, currentQuestion.r, 0, Math.PI * 2);
+    } else {
+      // 半円や1/4円の場合、中心から線を描いて図形として閉じる
+      ctx.moveTo(currentQuestion.x, currentQuestion.y);
+      ctx.arc(currentQuestion.x, currentQuestion.y, currentQuestion.r, currentQuestion.startAngle, currentQuestion.endAngle);
+      ctx.closePath();
+    }
+
     ctx.fillStyle = '#fff3e0';
     ctx.fill();
     ctx.lineWidth = 4;
@@ -131,8 +160,8 @@
     const tapX = clientX - rect.left;
     const tapY = clientY - rect.top;
 
-    const dist = Math.hypot(tapX - currentCircle.x, tapY - currentCircle.y);
-    const threshold = currentCircle.r * 0.15;
+    const dist = Math.hypot(tapX - currentQuestion.x, tapY - currentQuestion.y);
+    const threshold = currentQuestion.r * 0.15;
 
     drawQuestion();
 
@@ -142,9 +171,9 @@
     ctx.fillStyle = '#e91e63';
     ctx.fill();
 
-    // 正解の中心（緑丸）
+    // 正解の中心（緑丸）※半円や1/4円でも、本当の中心は常にここ！
     ctx.beginPath();
-    ctx.arc(currentCircle.x, currentCircle.y, 6, 0, Math.PI * 2);
+    ctx.arc(currentQuestion.x, currentQuestion.y, 6, 0, Math.PI * 2);
     ctx.fillStyle = '#4caf50';
     ctx.fill();
 
@@ -152,7 +181,7 @@
     ctx.beginPath();
     ctx.setLineDash([4, 4]);
     ctx.moveTo(tapX, tapY);
-    ctx.lineTo(currentCircle.x, currentCircle.y);
+    ctx.lineTo(currentQuestion.x, currentQuestion.y);
     ctx.strokeStyle = '#e91e63';
     ctx.lineWidth = 2;
     ctx.stroke();
@@ -161,7 +190,7 @@
     if (dist <= threshold) {
       msg.textContent = '🎉 大あたり！すごい！';
     } else {
-      msg.textContent = 'おしい！あともうちょっと！';
+      msg.textContent = 'おしい！本当の中心はここだよ！';
     }
 
     nextBtn.style.display = 'inline-block';
