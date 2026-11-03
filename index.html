@@ -130,7 +130,7 @@
   <!-- タイトル画面 -->
   <div id="titleScreen" class="title-screen">
     <h2>🟡 円の中心をさがそう！</h2>
-    <p>中心に近いほど高い点数（最大100点）がもらえるよ！<br>全20問で高得点を目指そう！</p>
+    <p>中心に近いほど高得点（1問最大5点）！<br>全20問・100点満点を目指そう！</p>
     <button class="btn start-btn" onclick="startGame()">ゲームスタート！</button>
   </div>
 
@@ -153,8 +153,8 @@
   <div id="clearScreen" class="clear-screen">
     <h2>🏆 ぜんぶクリア！おめでとう！</h2>
     <p>全20問のチャレンジが終わりました！<br>あなたの合計スコアは……</p>
-    <div class="score-badge" id="scoreText">0 点 / 2000点</div>
-    <p>もっと中心を狙って、高得点を目指そう！</p>
+    <div class="score-badge" id="scoreText">0 点 / 100点</div>
+    <p>すごい集中力だったね！もう一度100点満点を目指そう！</p>
     <button class="btn" onclick="returnToTitle()">タイトルへもどる</button>
   </div>
 </div>
@@ -237,7 +237,7 @@
     if (questionNumber > TOTAL_QUESTIONS) {
       gameScreen.style.display = 'none';
       clearScreen.style.display = 'block';
-      scoreText.textContent = `${totalScore} 点 / 2000点`;
+      scoreText.textContent = `${totalScore} 点 / 100点`;
       return;
     }
 
@@ -314,7 +314,7 @@
     const tapY = clientY - rect.top;
 
     const dist = Math.hypot(tapX - currentQuestion.x, tapY - currentQuestion.y);
-    const maxAllowableDist = currentQuestion.r * 0.25; // 判定閾値
+    const maxAllowableDist = currentQuestion.r * 0.25;
 
     drawQuestion();
 
@@ -343,21 +343,23 @@
     let earnedPoints = 0;
 
     if (dist <= maxAllowableDist) {
-      // 距離に応じて点数を算出（近いほど100点に近づく）
-      // 誤差0で100点、限界ギリギリで60点
+      // 誤差に応じた得点を算出（最高5点、最低3点）
       const ratio = dist / maxAllowableDist; // 0.0 〜 1.0
-      earnedPoints = Math.round(100 - ratio * 40);
+      const rawPoints = 5 - ratio * 2; // 5.0 〜 3.0
+      earnedPoints = Math.round(rawPoints);
+      if (earnedPoints < 3) earnedPoints = 3; // 範囲内であれば最低でも3点
+      
       totalScore += earnedPoints;
 
-      if (earnedPoints >= 95) {
-        msg.textContent = `🌟 ピタリ賞！ 100点！すごい！`;
+      if (earnedPoints === 5) {
+        msg.textContent = `🌟 ピタリ賞！ 5点ゲット！すごい！`;
       } else {
         msg.textContent = `🎉 大あたり！ ${earnedPoints}点ゲット！`;
       }
       playSound('correct');
     } else {
       earnedPoints = 0;
-      msg.textContent = 'おしい！ちょっと中心から離れちゃった（0点）';
+      msg.textContent = 'おしい！中心から離れちゃった（0点）';
       playSound('wrong');
     }
 
