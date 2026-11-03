@@ -82,6 +82,45 @@
   let currentQuestion = { x: 0, y: 0, r: 0, type: 'full', startAngle: 0, endAngle: 0 };
   let isAnswered = false;
 
+  // Web Audio APIを使った効果音機能
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  function playSound(type) {
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    const now = audioCtx.currentTime;
+
+    if (type === 'correct') {
+      // ピンポン♪（高い2音のビープ音）
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, now); // D5
+      osc.frequency.setValueAtTime(880.00, now + 0.12); // A5
+      
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      
+      osc.start(now);
+      osc.stop(now + 0.4);
+    } else {
+      // ブー（低めの音）
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(150, now);
+      osc.frequency.setValueAtTime(120, now + 0.15);
+      
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      
+      osc.start(now);
+      osc.stop(now + 0.35);
+    }
+  }
+
   function resizeCanvas() {
     const rect = wrapper.getBoundingClientRect();
     if (rect.width === 0) return;
@@ -103,7 +142,6 @@
     const x = Math.floor(Math.random() * (canvas.width - r * 2 - padding * 2)) + r + padding;
     const y = Math.floor(Math.random() * (canvas.height - r * 2 - padding * 2)) + r + padding;
 
-    // 確実に「フル」「半円」「1/4円」が抽選されるように設定
     const types = ['full', 'half', 'quarter'];
     const type = types[Math.floor(Math.random() * types.length)];
 
@@ -134,7 +172,6 @@
     if (currentQuestion.type === 'full') {
       ctx.arc(currentQuestion.x, currentQuestion.y, currentQuestion.r, 0, Math.PI * 2);
     } else {
-      // 半円や1/4円は中心（頂点）から描き始める
       ctx.moveTo(currentQuestion.x, currentQuestion.y);
       ctx.arc(currentQuestion.x, currentQuestion.y, currentQuestion.r, currentQuestion.startAngle, currentQuestion.endAngle);
       ctx.closePath();
@@ -159,7 +196,7 @@
     const tapY = clientY - rect.top;
 
     const dist = Math.hypot(tapX - currentQuestion.x, tapY - currentQuestion.y);
-    const threshold = currentQuestion.r * 0.2; // 少し判定を優しく調整
+    const threshold = currentQuestion.r * 0.2;
 
     drawQuestion();
 
@@ -187,8 +224,10 @@
 
     if (dist <= threshold) {
       msg.textContent = '🎉 大あたり！すごい！';
+      playSound('correct'); // 正解のピンポン音
     } else {
       msg.textContent = 'おしい！本当の中心はここだよ！';
+      playSound('wrong');   // 残念の音
     }
 
     nextBtn.style.display = 'inline-block';
