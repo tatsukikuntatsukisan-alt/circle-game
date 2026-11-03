@@ -82,7 +82,7 @@
   let currentQuestion = { x: 0, y: 0, r: 0, type: 'full', startAngle: 0, endAngle: 0 };
   let isAnswered = false;
 
-  // Web Audio APIを使った効果音機能
+  // 効果音機能
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
   function playSound(type) {
@@ -97,10 +97,10 @@
     const now = audioCtx.currentTime;
 
     if (type === 'correct') {
-      // ピンポン♪（高い2音のビープ音）
+      // ピンポン♪
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(587.33, now); // D5
-      osc.frequency.setValueAtTime(880.00, now + 0.12); // A5
+      osc.frequency.setValueAtTime(587.33, now);
+      osc.frequency.setValueAtTime(880.00, now + 0.12);
       
       gain.gain.setValueAtTime(0.2, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
@@ -108,7 +108,7 @@
       osc.start(now);
       osc.stop(now + 0.4);
     } else {
-      // ブー（低めの音）
+      // ブー
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(150, now);
       osc.frequency.setValueAtTime(120, now + 0.15);
@@ -170,16 +170,16 @@
 
     ctx.beginPath();
     if (currentQuestion.type === 'full') {
+      // フル円はこれまで通り中を塗りつぶして表示
       ctx.arc(currentQuestion.x, currentQuestion.y, currentQuestion.r, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff3e0';
+      ctx.fill();
     } else {
-      ctx.moveTo(currentQuestion.x, currentQuestion.y);
+      // 半円や1/4円は「円弧の線だけ」を表示する（直線や塗りつぶしなし）
       ctx.arc(currentQuestion.x, currentQuestion.y, currentQuestion.r, currentQuestion.startAngle, currentQuestion.endAngle);
-      ctx.closePath();
     }
 
-    ctx.fillStyle = '#fff3e0';
-    ctx.fill();
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 5;
     ctx.strokeStyle = '#ffa726';
     ctx.stroke();
   }
@@ -224,10 +224,10 @@
 
     if (dist <= threshold) {
       msg.textContent = '🎉 大あたり！すごい！';
-      playSound('correct'); // 正解のピンポン音
+      playSound('correct');
     } else {
       msg.textContent = 'おしい！本当の中心はここだよ！';
-      playSound('wrong');   // 残念の音
+      playSound('wrong');
     }
 
     nextBtn.style.display = 'inline-block';
